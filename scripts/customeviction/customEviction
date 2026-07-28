@@ -12,8 +12,10 @@
 # Helper functions #
 ####################
 
-# Treat unset variables as error
-set -u
+# Fail loudly: exit on error, error on unset variables, and surface failures
+# from any stage of a pipeline. Pipelines whose non-match is a legitimate
+# "nothing to do" outcome are guarded with `|| true` below.
+set -euo pipefail
 
 error_usage () {
   echo "Usage: $0 -e %eventName -f %fsName -p %storagePool" >&2
@@ -42,7 +44,13 @@ LIST_NAME="evictList"
 ####################################
 
 # Check number of commandline options
-[ $# -ne 6 ] && error_usage
+[ "$#" -ne 6 ] && error_usage
+
+# Initialise so the mandatory-option check below is well-defined under `set -u`
+# even if getopts never encounters a given flag.
+PARAM_EVENT=""
+PARAM_FS=""
+PARAM_POOL=""
 
 # Check commandline options
 while getopts 'e:f:p:' OPT; do
@@ -62,7 +70,7 @@ done
 #################
 
 # Redirect stdout and stderr to log file
-exec 1>>$LOG 2>&1
+exec 1>>"$LOG" 2>&1
 
 # Check if another instance is already running
 PID="$(pidof -x "$(basename "$0")" -o %PPID)"
@@ -75,9 +83,11 @@ PID="$(pidof -x "$(basename "$0")" -o %PPID)"
 echo -e "\n################################################################################\n"
 echo "$0 starting $(date -Im) on node $(/usr/lpp/mmfs/bin/mmlsnode -N localhost)..."
 
-# Read thresholds from filesystem policy
-HIGH_MIG="$(/usr/lpp/mmfs/bin/mmlspolicy "${PARAM_FS}" -L | grep THRESHOLD | sed -e 's/^.*THRESHOLD\s*(//' -e 's/,.*$//')"
-LOW_MIG="$(/usr/lpp/mmfs/bin/mmlspolicy "${PARAM_FS}" -L | grep THRESHOLD | sed -e 's/^.*THRESHOLD\s*([0-9]*,//' -e 's/).*$//')"
+# Read thresholds from filesystem policy. These feed the debug line below only;
+# a policy with no THRESHOLD clause is not an error, so `grep` finding nothing
+# must not abort the run under `set -o pipefail`.
+HIGH_MIG="$(/usr/lpp/mmfs/bin/mmlspolicy "${PARAM_FS}" -L | grep THRESHOLD | sed -e 's/^.*THRESHOLD\s*(//' -e 's/,.*$//' || true)"
+LOW_MIG="$(/usr/lpp/mmfs/bin/mmlspolicy "${PARAM_FS}" -L | grep THRESHOLD | sed -e 's/^.*THRESHOLD\s*([0-9]*,//' -e 's/).*$//' || true)"
 
 # Debug output
 echo "PARAM_FS: $PARAM_FS | PARAM_POOL: $PARAM_POOL | HIGH_MIG: $HIGH_MIG | LOW_MIG: $LOW_MIG"
@@ -102,8 +112,9 @@ rm -f "${LIST_DIR}/list.${LIST_NAME}"
 # Evict filesets #
 ##################
 
-# Find AFM filesets
-EVICT_FSET="$(/usr/lpp/mmfs/bin/mmlsfileset "${PARAM_FS}" --afm -Y | grep -v HEADER | grep -E '(.*:){19}enabled:' | cut -d ':' -f 8)"
+# Find AFM filesets. Having no AFM-enabled filesets is a normal outcome, so the
+# `grep` that selects them returning 1 must not abort the run under pipefail.
+EVICT_FSET="$(/usr/lpp/mmfs/bin/mmlsfileset "${PARAM_FS}" --afm -Y | grep -v HEADER | grep -E '(.*:){19}enabled:' | cut -d ':' -f 8 || true)"
 
 # Iterate over filesets
 for fileset in $EVICT_FSET; do
@@ -114,8 +125,9 @@ for fileset in $EVICT_FSET; do
   # Clean up file list
   rm -f "${LIST_DIR}/${fileset}.${LIST_NAME}"
 
-  # Find candidates in fileset's path
-  grep -E "^[0-9]+\s[0-9]+\s[0-9]\s\s\s--\s${fileset_path}" "${LIST_DIR}/list.${LIST_NAME}" > "${LIST_DIR}/${fileset}.${LIST_NAME}"
+  # Find candidates in fileset's path. No matching candidates is normal; the
+  # emptiness check below handles it, so grep's exit 1 must not abort the run.
+  grep -E "^[0-9]+\s[0-9]+\s[0-9]\s\s\s--\s${fileset_path}" "${LIST_DIR}/list.${LIST_NAME}" > "${LIST_DIR}/${fileset}.${LIST_NAME}" || true
 
   # Check if candidates found
   if [ -s "${LIST_DIR}/${fileset}.${LIST_NAME}" ]; then

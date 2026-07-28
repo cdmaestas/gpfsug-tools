@@ -14,8 +14,9 @@
 #   1              - Error deleting snapshot associations
 #   2              - Warning, nothing to do
 
-# Treat unset variables as error
-set -u
+# Fail loudly: exit on error, error on unset variables, and surface failures
+# from any stage of a pipeline (not just the last command).
+set -euo pipefail
 
 # Echo to stderr
 echoerr() { echo "$@" 1>&2; }
@@ -29,11 +30,14 @@ if [ "$(whoami)" != "root" ]; then
   PREFIX="sudo "
 fi
 
-# Read snapshot associations
-OUT=$( ${PREFIX}${GUI_PATH}/lssnapassoc -Y | grep -v "HEADER" )
+# Read snapshot associations. `grep -v` returns 1 when every line is a HEADER
+# (i.e. no associations); tolerate that here so the emptiness check below can
+# emit the intended "nothing to do" exit 2 rather than tripping `set -e`.
+# shellcheck disable=SC2086  # $PREFIX is "sudo " (or "") and is meant to word-split.
+OUT=$( ${PREFIX}${GUI_PATH}/lssnapassoc -Y | grep -v "HEADER" || true )
 
 # Check if any snapshot associations exist
-if [ "$OUT" == "" ]; then
+if [ -z "$OUT" ]; then
   echoerr "No snapshot schedule associations found!"
   exit 2
 fi
@@ -56,7 +60,7 @@ echo "$OUT" | while read -r line || [ -n "$line" ]; do
   DEL_CMD="${PREFIX}${GUI_PATH}/rmsnapassoc ${DEVICE} ${RULE}"
 
   # Optionally append fileset to commands
-  if [ ! -z "$FILESET" ]; then
+  if [ -n "$FILESET" ]; then
     BKP_CMD+=" -j ${FILESET}"
     DEL_CMD+=" -j ${FILESET}"
   fi

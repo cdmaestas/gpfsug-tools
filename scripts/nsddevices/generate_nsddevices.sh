@@ -8,17 +8,22 @@
 # Tested on Linux
 # Add the output to the correct section of the nsddevices file in /var/mmfs/etc/
 
-echo "-- Cut here --";
+# Exit on error / unset variable. (pipefail is not available in POSIX sh.)
+set -eu
 
-for PART in $(cat /proc/partitions | grep sd | awk '{print $4}' | sort); do 
-  echo $PART | egrep -q [0-9] ; 
-  if [ $? -eq 0 ]; then 
-    echo "echo \"$PART gpt\""; 
-  else 
-    echo "echo \"$PART generic\""; 
-  fi ; 
+echo "-- Cut here --"
+
+# `awk` replaces the cat|grep|awk pipeline; `grep -E` replaces the deprecated
+# egrep; testing grep directly replaces the `$?`-after-command idiom.
+# shellcheck disable=SC2013  # device names are single tokens; word-splitting is intended.
+for PART in $(awk '/sd/ {print $4}' /proc/partitions | sort); do
+  if echo "$PART" | grep -qE '[0-9]'; then
+    echo "echo \"$PART gpt\""
+  else
+    echo "echo \"$PART generic\""
+  fi
 done
 
-echo "-- Cut here --";
+echo "-- Cut here --"
 
 # EOF
