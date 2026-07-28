@@ -51,3 +51,17 @@ socketMaxListenConnections 8192
 
 [....]
 ```
+
+## Usage
+
+Both scripts read their input from a file named `mmlsconfig.wien` in the current
+directory. Capture your cluster's configuration into that file first:
+
+```
+mmlsconfig > mmlsconfig.wien
+./mmlsconfigclean | head -n 40
+```
+
+The input filename is set once via the `CONFIG` variable at the top of each
+script if you prefer a different name. If the file is missing, the scripts now
+exit non-zero rather than silently producing no output.

@@ -18,3 +18,5 @@ To re-apply all snapshot schedule associations (run this after the upgrade):
 ```
 ./snapassocs.sh
 ```
+
+A manual page is available: `man -l ../../man/backupsnapassoc.1`.

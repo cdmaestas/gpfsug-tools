@@ -1,0 +1,63 @@
+.TH GPFSDF 1 "2026-07-28" "gpfsug-tools" "GPFS/Spectrum Scale Usergroup Tools"
+.SH NAME
+gpfsdf \- summarise per-fileset quota and usage on a Spectrum Scale filesystem
+.SH SYNOPSIS
+.B gpfsdf
+.SH DESCRIPTION
+.B gpfsdf
+prints a table of independent filesets together with their path, quota,
+current usage and file count, followed by a totals line. It combines the
+per-fileset quota figures reported by
+.BR mmrepquota (8)
+with the fileset paths reported by
+.BR mmlsfileset (8).
+.PP
+Quota and usage are shown in gibibytes (GiB). The script takes no options; the
+target filesystem is currently hard-coded to
+.BR NOC .
+.SH REQUIREMENTS
+.B gpfsdf
+requires Python 3. It invokes
+.I /usr/lpp/mmfs/bin/mmrepquota
+and
+.I /usr/lpp/mmfs/bin/mmlsfileset
+directly (no shell), so it must run on a node where those commands are
+available and the caller is permitted to run them.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B non-zero
+.BR mmrepquota (8)
+or
+.BR mmlsfileset (8)
+failed, or their output could not be parsed. Earlier versions printed an empty
+table in this situation; the command now fails loudly instead.
+.SH EXAMPLE
+.RS
+.EX
+$ gpfsdf
+
+Path                                   Fileset          Quota(Gb)  Used(Gb)     Files
+
+/noc/alpha                             alpha                    1     0.500       250
+/noc/projA                             projA                    2     1.000       500
+
+Total                                                           3     1.500       750
+.EE
+.RE
+.SH FILES
+.TP
+.I /usr/lpp/mmfs/bin/mmrepquota
+Reports per-fileset block and file usage against quotas.
+.TP
+.I /usr/lpp/mmfs/bin/mmlsfileset
+Reports fileset names and their linked paths.
+.SH BUGS
+The filesystem name is hard-coded to
+.BR NOC ;
+edit the script to target a different filesystem.
+.SH SEE ALSO
+.BR mmrepquota (8),
+.BR mmlsfileset (8)

@@ -36,3 +36,11 @@ Furthermore, activate the threshold-based list policy with:
 ```
 mmchpolicy <yourfilesystem> actListPol
 ```
+
+## Error behaviour
+
+The script runs under `set -euo pipefail` and now fails loudly instead of
+continuing silently: if `mmapplypolicy` or a per-fileset `mmafmctl evict` fails,
+it logs an `ASSERT: ...` line (to the configured `LOG`) and exits non-zero. A run
+that finds no candidates, or no AFM filesets, is still treated as a normal, quiet
+outcome.

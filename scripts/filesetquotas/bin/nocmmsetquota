@@ -1,7 +1,34 @@
 #!/bin/sh
-echo "*** Edit quota limits for FILESET $fileset " > /tmp/setquota.tmp
-echo "NOTE: block limits will be rounded up to the next multiple of the block size." >> /tmp/setquota.tmp
-echo "      block units may be: K, M, or G." >> /tmp/setquota.tmp
-echo "NOC: blocks in use: 0K, limits (soft = ${size}G, hard = ${size}G)" >> /tmp/setquota.tmp
-echo "        inodes in use: 0, limits (soft = 0, hard = 0)" >> /tmp/setquota.tmp
-/bin/cp  /tmp/setquota.tmp $1
+# Non-interactive $EDITOR for `mmedquota`: writes a canned quota-edit buffer to
+# the file that mmedquota passes as $1. `fileset` and `size` are inherited from
+# the environment (exported by the calling mkfileset/mmsetfsquota scripts).
+# shellcheck disable=SC2154  # fileset/size are inherited from the environment.
+
+# mmedquota invokes $EDITOR with the temp quota file as $1. If it is missing we
+# would silently fail to set any quota, so assert it is present.
+if [ -z "${1:-}" ]; then
+  echo "nocmmsetquota: no target file supplied by mmedquota" >&2
+  exit 1
+fi
+
+# Use mktemp rather than a fixed, world-guessable /tmp/setquota.tmp: the old
+# name was a symlink-attack / race target in the shared, world-writable /tmp.
+tmpfile="$(mktemp "${TMPDIR:-/tmp}/setquota.XXXXXX")" || {
+  echo "nocmmsetquota: failed to create temp file" >&2
+  exit 1
+}
+trap 'rm -f "$tmpfile"' EXIT
+{
+  echo "*** Edit quota limits for FILESET ${fileset} "
+  echo "NOTE: block limits will be rounded up to the next multiple of the block size."
+  echo "      block units may be: K, M, or G."
+  echo "NOC: blocks in use: 0K, limits (soft = ${size}G, hard = ${size}G)"
+  echo "        inodes in use: 0, limits (soft = 0, hard = 0)"
+} >"$tmpfile"
+
+# A failed copy means mmedquota edits an unchanged buffer and the quota is left
+# unset without any warning; surface it instead.
+if ! /bin/cp "$tmpfile" "$1"; then
+  echo "nocmmsetquota: failed to write quota buffer to $1" >&2
+  exit 1
+fi

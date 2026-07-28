@@ -1,0 +1,14 @@
+# Ruff configuration for gpfsug-tools' Python.
+# Pins an explicit, version-stable rule set so CI and local pre-commit agree
+# regardless of the exact Ruff release installed.
+
+# GPFS admin nodes commonly run the RHEL system Python 3.6+.
+target-version = "py38"
+line-length = 100
+
+# The vendored rsync tree contains no Python, but exclude it defensively.
+extend-exclude = ["bin/rsync/rsync-3.0.9-patched"]
+
+[lint]
+# pycodestyle errors/warnings, pyflakes, and import sorting.
+select = ["E", "F", "W", "I"]
