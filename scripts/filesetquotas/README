@@ -18,6 +18,7 @@ gpfsdf:
     with their quotas and useage.
 	Requires Python 3 (it was ported from Python 2). It now exits non-zero if
     mmrepquota or mmlsfileset fails, rather than printing an empty table.
+	A manual page is available: man -l ../../man/gpfsdf.1
 
 Note: mkfileset and mmsetfsquota are tcsh scripts and reference a site-specific
 path for the nocmmsetquota helper (adjust the EDITOR path inside them for your

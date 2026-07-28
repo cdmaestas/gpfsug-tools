@@ -1,0 +1,90 @@
+.TH BACKUPSNAPASSOC 1 "2026-07-28" "gpfsug-tools" "GPFS/Spectrum Scale Usergroup Tools"
+.SH NAME
+backupsnapassoc.sh \- back up and optionally delete Spectrum Scale
+snapshot schedule associations
+.SH SYNOPSIS
+.B backupsnapassoc.sh
+.RB [ --delete ]
+.SH DESCRIPTION
+.B backupsnapassoc.sh
+reads the snapshot schedule associations defined through the IBM Spectrum Scale
+GUI and writes to standard output a runnable
+.B bash
+script that recreates them. Redirect that output to a file so the associations
+can be re-applied later \(em for example around a software upgrade, during which
+.BR mmcrsnapshot (1)
+and
+.BR mmdelsnapshot (1)
+activity must be quiesced.
+.PP
+The associations are read with
+.I lssnapassoc
+and recreated with
+.I mksnapassoc
+from the GUI CLI directory
+.IR /usr/lpp/mmfs/gui/cli .
+If the command is not run as
+.BR root ,
+each GUI CLI invocation is prefixed with
+.BR sudo .
+.SH OPTIONS
+.TP
+.B --delete
+After emitting the re-apply commands, also delete every existing snapshot
+schedule association (via
+.IR rmsnapassoc ).
+Always capture the standard output first so the associations can be restored.
+The delete arguments are passed to
+.I rmsnapassoc
+as a fixed argument list, so values originating from GUI output are never
+interpreted as shell syntax.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+An error occurred while deleting a snapshot association. The offending command
+is printed to standard error so it can be re-run manually.
+.TP
+.B 2
+No snapshot schedule associations were found; nothing to do.
+.SH EXAMPLES
+Back up all associations:
+.PP
+.RS
+.EX
+\&./backupsnapassoc.sh > snapassocs.sh
+.EE
+.RE
+.PP
+Back up and then delete them (run before an upgrade):
+.PP
+.RS
+.EX
+\&./backupsnapassoc.sh --delete > snapassocs.sh
+.EE
+.RE
+.PP
+Re-apply them (run after the upgrade):
+.PP
+.RS
+.EX
+\&./snapassocs.sh
+.EE
+.RE
+.SH FILES
+.TP
+.I /usr/lpp/mmfs/gui/cli/lssnapassoc
+Lists existing snapshot schedule associations.
+.TP
+.I /usr/lpp/mmfs/gui/cli/mksnapassoc
+Creates a snapshot schedule association.
+.TP
+.I /usr/lpp/mmfs/gui/cli/rmsnapassoc
+Removes a snapshot schedule association.
+.SH AUTHOR
+Achim Christ.
+.SH SEE ALSO
+.BR mmcrsnapshot (1),
+.BR mmdelsnapshot (1)
