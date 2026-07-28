@@ -65,15 +65,22 @@ echo "$OUT" | while read -r line || [ -n "$line" ]; do
     DEL_CMD+=" -j ${FILESET}"
   fi
 
-  # Append further parameters to delete command
-  DEL_CMD+=" -k -f &> /dev/null"
+  # Append further parameters to delete command (for the human-readable hint)
+  DEL_CMD+=" -k -f"
 
   # Write backup command to stdout
   echo "$BKP_CMD"
 
   # Optionally run delete command
   if [ "${1:-}" == "--delete" ]; then
-    if ! eval "$DEL_CMD"; then
+    # Execute via an argument array instead of `eval`: DEVICE/FILESET/RULE come
+    # from GUI output, and eval would let any shell metacharacters in them run.
+    del_args=()
+    [ -n "$PREFIX" ] && del_args+=(sudo)
+    del_args+=("${GUI_PATH}/rmsnapassoc" "$DEVICE" "$RULE")
+    [ -n "$FILESET" ] && del_args+=(-j "$FILESET")
+    del_args+=(-k -f)
+    if ! "${del_args[@]}" &>/dev/null; then
       echoerr "Error deleting snapshot association - try running following command manually:"
       echoerr "$DEL_CMD"
       exit 1

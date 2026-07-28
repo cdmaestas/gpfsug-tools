@@ -1,61 +1,46 @@
 #!/usr/bin/python3
-import os
+import subprocess  # nosec B404  # argv is always a fixed literal list; no shell, no untrusted input
 import sys
-import time
 
 # Collect per-fileset usage from mmrepquota and per-fileset paths from
 # mmlsfileset for the NOC filesystem, then print a combined quota summary.
 
 
-def run(cmd):
-    """Run a shell command, failing loudly instead of continuing on error.
+def gpfs_lines(argv, skip):
+    """Run a GPFS command and return its stdout lines past the header rows.
 
-    Previously the return code was ignored, so a failed mmrepquota/mmlsfileset
-    left an empty output file and the script silently printed an empty table.
+    Runs the command directly (no shell, so no command-injection surface) and
+    captures stdout in-process (no predictable /tmp file to race or hijack).
+    check=True makes a failed command raise loudly instead of leaving the old
+    code to parse an empty temp file and print a silent, empty table.
     """
-    rc = os.system(cmd)
-    assert rc == 0, f"Command failed (exit status {rc}): {cmd}"
+    result = subprocess.run(  # nosec B603  # fixed argv, no shell, no untrusted input
+        argv, capture_output=True, text=True, check=True
+    )
+    return result.stdout.splitlines()[skip:]
 
 
-ioutfile = "/tmp/" + str(time.time())
-cmd = "/usr/lpp/mmfs/bin/mmrepquota -j NOC > " + ioutfile
-run(cmd)
-
-f = open(ioutfile)
-f.readline()
-f.readline()
-lines = f.readlines()
-f.close()
-cmd = "rm -f " + ioutfile
-os.system(cmd)  # best-effort cleanup of our own temp file
-# Split into lines, skipping any blank line (e.g. a trailing newline)
+# Split into fields, skipping any blank line (e.g. a trailing newline)
+lines = gpfs_lines(["/usr/lpp/mmfs/bin/mmrepquota", "-j", "NOC"], skip=2)
 fsettable = [line.split() for line in lines if line.strip()]
 # Make a database out of it
 fsetDict = {}
 # Populate the database, checking for duplicate paths
 for x in fsettable:
-    assert len(x) > 8, f"Unexpected mmrepquota line (need >=9 fields): {x}"
+    if len(x) <= 8:
+        raise ValueError(f"Unexpected mmrepquota line (need >=9 fields): {x}")
     if x[0] in fsetDict:
         print("Duplicate path: " + x[0])
         break
     fsetDict[x[0]] = [x[2], x[3], x[4], x[5], x[8]]
 #  fileset   Used   quota  limit  in_doubt  Number_of_files
-cmd = "/usr/lpp/mmfs/bin/mmlsfileset NOC > " + ioutfile
-run(cmd)
-f = open(ioutfile)
-f.readline()
-f.readline()
-f.readline()
-lines = f.readlines()
-f.close()
-cmd = "rm -f " + ioutfile
-os.system(cmd)  # best-effort cleanup of our own temp file
-# Split into lines, skipping any blank line
+lines = gpfs_lines(["/usr/lpp/mmfs/bin/mmlsfileset", "NOC"], skip=3)
 table = [line.split() for line in lines if line.strip()]
 # Make a database out of it
 pathDict = {}
 for x in table:
-    assert len(x) > 2, f"Unexpected mmlsfileset line (need >=3 fields): {x}"
+    if len(x) <= 2:
+        raise ValueError(f"Unexpected mmlsfileset line (need >=3 fields): {x}")
     if x[0] in pathDict:
         print("Duplicate ID" + pathDict[x[0]])
         sys.exit()

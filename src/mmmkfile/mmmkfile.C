@@ -9,6 +9,14 @@
  * Date: 24 Feb 2012
  * Version : 0.1
  *
+ * WARNING - UNFINISHED, DOES NOT BUILD, DO NOT DEPLOY.
+ *   This is abandoned work-in-progress. It references undefined identifiers
+ *   (gpfsFileArg, fileHandle, free_range, ...) and uses '.' on a pointer, so
+ *   it does not compile. It also contains a known heap-buffer-overflow: tinfo
+ *   is malloc'd for a single struct thread_info but then written at
+ *   tinfo[1..num_threads] (see the loop and its own inline comment). If this
+ *   is ever completed, allocate with calloc(num_threads, sizeof *tinfo) and
+ *   index from 0. Left as-is here rather than silently rewritten.
  */
 
 #include <stdio.h>

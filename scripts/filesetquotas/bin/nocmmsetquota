@@ -11,7 +11,13 @@ if [ -z "${1:-}" ]; then
   exit 1
 fi
 
-tmpfile="/tmp/setquota.tmp"
+# Use mktemp rather than a fixed, world-guessable /tmp/setquota.tmp: the old
+# name was a symlink-attack / race target in the shared, world-writable /tmp.
+tmpfile="$(mktemp "${TMPDIR:-/tmp}/setquota.XXXXXX")" || {
+  echo "nocmmsetquota: failed to create temp file" >&2
+  exit 1
+}
+trap 'rm -f "$tmpfile"' EXIT
 {
   echo "*** Edit quota limits for FILESET ${fileset} "
   echo "NOTE: block limits will be rounded up to the next multiple of the block size."
