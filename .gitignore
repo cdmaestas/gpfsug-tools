@@ -5,8 +5,6 @@ __pycache__/
 
 # Build artifacts from src/mmmkfile and scripts/filesetquotas/bin/nocdf.c
 /src/mmmkfile/mmmkfile
-/src/mmmkfile/test
-/src/mmmkfile/test2
 *.o
 
 # CI scratch
