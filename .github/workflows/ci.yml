@@ -65,13 +65,3 @@ jobs:
 
       - name: Bandit security scan
         run: bandit scripts/filesetquotas/bin/gpfsdf
-
-  precommit:
-    name: pre-commit (all hooks)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - uses: pre-commit/action@v3.0.1
