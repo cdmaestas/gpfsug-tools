@@ -3,6 +3,14 @@
 # the file that mmedquota passes as $1. `fileset` and `size` are inherited from
 # the environment (exported by the calling mkfileset/mmsetfsquota scripts).
 # shellcheck disable=SC2154  # fileset/size are inherited from the environment.
+
+# mmedquota invokes $EDITOR with the temp quota file as $1. If it is missing we
+# would silently fail to set any quota, so assert it is present.
+if [ -z "${1:-}" ]; then
+  echo "nocmmsetquota: no target file supplied by mmedquota" >&2
+  exit 1
+fi
+
 tmpfile="/tmp/setquota.tmp"
 {
   echo "*** Edit quota limits for FILESET ${fileset} "
@@ -11,4 +19,10 @@ tmpfile="/tmp/setquota.tmp"
   echo "NOC: blocks in use: 0K, limits (soft = ${size}G, hard = ${size}G)"
   echo "        inodes in use: 0, limits (soft = 0, hard = 0)"
 } > "$tmpfile"
-/bin/cp "$tmpfile" "$1"
+
+# A failed copy means mmedquota edits an unchanged buffer and the quota is left
+# unset without any warning; surface it instead.
+if ! /bin/cp "$tmpfile" "$1"; then
+  echo "nocmmsetquota: failed to write quota buffer to $1" >&2
+  exit 1
+fi

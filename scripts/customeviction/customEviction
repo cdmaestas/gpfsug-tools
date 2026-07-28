@@ -99,11 +99,15 @@ echo "PARAM_FS: $PARAM_FS | PARAM_POOL: $PARAM_POOL | HIGH_MIG: $HIGH_MIG | LOW_
 # Clean up file list
 rm -f "${LIST_DIR}/list.${LIST_NAME}"
 
-# Generate file list by running list policy
+# Generate file list by running list policy. A failure here previously went
+# unnoticed (the emptiness check below would just report "No candidates");
+# surface it explicitly so a broken policy run is distinguishable from an
+# empty result.
 /usr/lpp/mmfs/bin/mmapplypolicy "${PARAM_FS}" \
   -f "${LIST_DIR}/" \
   -I defer \
-  -L 0
+  -L 0 \
+  || { echo "ASSERT: mmapplypolicy failed for ${PARAM_FS} (rc $?)"; exit 1; }
 
 # Check if candidates found
 [ ! -s "${LIST_DIR}/list.${LIST_NAME}" ] && echo "No candidates found!" && exit 1
@@ -134,10 +138,12 @@ for fileset in $EVICT_FSET; do
 
     echo "Evicting $(wc -l "${LIST_DIR}/${fileset}.${LIST_NAME}" | cut -d ' ' -f 1) files from ${fileset}..."
 
-    # Evict candidates from fileset
+    # Evict candidates from fileset. A per-fileset eviction failure was
+    # previously swallowed; make it loud so partial/failed evictions surface.
     /usr/lpp/mmfs/bin/mmafmctl "${PARAM_FS}" evict \
       -j "${fileset}" \
-      --list-file "${LIST_DIR}/${fileset}.${LIST_NAME}"
+      --list-file "${LIST_DIR}/${fileset}.${LIST_NAME}" \
+      || { echo "ASSERT: mmafmctl evict failed for fileset ${fileset} (rc $?)"; exit 1; }
 
   fi
 
