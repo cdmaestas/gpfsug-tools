@@ -18,7 +18,7 @@ tmpfile="/tmp/setquota.tmp"
   echo "      block units may be: K, M, or G."
   echo "NOC: blocks in use: 0K, limits (soft = ${size}G, hard = ${size}G)"
   echo "        inodes in use: 0, limits (soft = 0, hard = 0)"
-} > "$tmpfile"
+} >"$tmpfile"
 
 # A failed copy means mmedquota edits an unchanged buffer and the quota is left
 # unset without any warning; surface it instead.

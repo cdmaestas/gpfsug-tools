@@ -34,7 +34,7 @@ fi
 # (i.e. no associations); tolerate that here so the emptiness check below can
 # emit the intended "nothing to do" exit 2 rather than tripping `set -e`.
 # shellcheck disable=SC2086  # $PREFIX is "sudo " (or "") and is meant to word-split.
-OUT=$( ${PREFIX}${GUI_PATH}/lssnapassoc -Y | grep -v "HEADER" || true )
+OUT=$(${PREFIX}${GUI_PATH}/lssnapassoc -Y | grep -v "HEADER" || true)
 
 # Check if any snapshot associations exist
 if [ -z "$OUT" ]; then
@@ -49,9 +49,9 @@ echo "#!/bin/bash"
 echo "$OUT" | while read -r line || [ -n "$line" ]; do
 
   # Extract details
-  DEVICE=$( echo "$line" | cut -d ':' -f 8 )
-  FILESET=$( echo "$line" | cut -d ':' -f 9 )
-  RULE=$( echo "$line" | cut -d ':' -f 10 )
+  DEVICE=$(echo "$line" | cut -d ':' -f 8)
+  FILESET=$(echo "$line" | cut -d ':' -f 9)
+  RULE=$(echo "$line" | cut -d ':' -f 10)
 
   # Compile backup command
   BKP_CMD="${PREFIX}${GUI_PATH}/mksnapassoc ${DEVICE} ${RULE}"

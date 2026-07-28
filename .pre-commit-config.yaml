@@ -1,0 +1,44 @@
+# Pre-commit hooks for gpfsug-tools.
+#
+# Install once with:  pip install pre-commit && pre-commit install
+# Run against everything:  pre-commit run --all-files
+#
+# The vendored rsync-3.0.9 tree is third-party and excluded everywhere.
+exclude: '^bin/rsync/rsync-3\.0\.9-patched/'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+      - id: check-executables-have-shebangs
+      - id: detect-private-key
+
+  # ShellCheck for bash/sh. tcsh is not a supported dialect, so the two tcsh
+  # helpers are excluded.
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        exclude: '^scripts/filesetquotas/bin/(mkfileset|mmsetfsquota)$'
+
+  # shfmt formatting for bash/sh (2-space indent, indent switch cases).
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt
+        args: ['-i', '2', '-ci', '-d']
+        exclude: '^scripts/filesetquotas/bin/(mkfileset|mmsetfsquota)$'
+
+  # Ruff for Python (lint + format). gpfsdf has no .py extension, so match it
+  # explicitly in addition to *.py files.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        files: '(\.py$|^scripts/filesetquotas/bin/gpfsdf$)'
+      - id: ruff-format
+        files: '(\.py$|^scripts/filesetquotas/bin/gpfsdf$)'

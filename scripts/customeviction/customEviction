@@ -17,12 +17,12 @@
 # "nothing to do" outcome are guarded with `|| true` below.
 set -euo pipefail
 
-error_usage () {
+error_usage() {
   echo "Usage: $0 -e %eventName -f %fsName -p %storagePool" >&2
   exit 1
 }
 
-decode_path () {
+decode_path() {
   printf '%b' "${1//%/\\x}"
 }
 
@@ -106,8 +106,11 @@ rm -f "${LIST_DIR}/list.${LIST_NAME}"
 /usr/lpp/mmfs/bin/mmapplypolicy "${PARAM_FS}" \
   -f "${LIST_DIR}/" \
   -I defer \
-  -L 0 \
-  || { echo "ASSERT: mmapplypolicy failed for ${PARAM_FS} (rc $?)"; exit 1; }
+  -L 0 ||
+  {
+    echo "ASSERT: mmapplypolicy failed for ${PARAM_FS} (rc $?)"
+    exit 1
+  }
 
 # Check if candidates found
 [ ! -s "${LIST_DIR}/list.${LIST_NAME}" ] && echo "No candidates found!" && exit 1
@@ -131,7 +134,7 @@ for fileset in $EVICT_FSET; do
 
   # Find candidates in fileset's path. No matching candidates is normal; the
   # emptiness check below handles it, so grep's exit 1 must not abort the run.
-  grep -E "^[0-9]+\s[0-9]+\s[0-9]\s\s\s--\s${fileset_path}" "${LIST_DIR}/list.${LIST_NAME}" > "${LIST_DIR}/${fileset}.${LIST_NAME}" || true
+  grep -E "^[0-9]+\s[0-9]+\s[0-9]\s\s\s--\s${fileset_path}" "${LIST_DIR}/list.${LIST_NAME}" >"${LIST_DIR}/${fileset}.${LIST_NAME}" || true
 
   # Check if candidates found
   if [ -s "${LIST_DIR}/${fileset}.${LIST_NAME}" ]; then
@@ -142,8 +145,11 @@ for fileset in $EVICT_FSET; do
     # previously swallowed; make it loud so partial/failed evictions surface.
     /usr/lpp/mmfs/bin/mmafmctl "${PARAM_FS}" evict \
       -j "${fileset}" \
-      --list-file "${LIST_DIR}/${fileset}.${LIST_NAME}" \
-      || { echo "ASSERT: mmafmctl evict failed for fileset ${fileset} (rc $?)"; exit 1; }
+      --list-file "${LIST_DIR}/${fileset}.${LIST_NAME}" ||
+      {
+        echo "ASSERT: mmafmctl evict failed for fileset ${fileset} (rc $?)"
+        exit 1
+      }
 
   fi
 

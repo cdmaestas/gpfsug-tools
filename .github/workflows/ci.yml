@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# The vendored rsync-3.0.9 tree under bin/rsync/ is third-party and is not
+# linted, formatted, or scanned here. The repo's own shell scripts all live
+# under scripts/ and its Python (gpfsdf) is matched explicitly.
+
+jobs:
+  shell:
+    name: Shell lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Discover own shell scripts (bash/sh, excluding tcsh)
+        id: discover
+        run: |
+          set -euo pipefail
+          files=()
+          while IFS= read -r f; do
+            head -1 "$f" | grep -qE '^#!.*(bash|/sh)\b' && files+=("$f")
+          done < <(git ls-files 'scripts/**')
+          printf '%s\n' "${files[@]}"
+          printf '%s\n' "${files[@]}" > .ci-shellfiles
+          echo "count=${#files[@]}" >> "$GITHUB_OUTPUT"
+
+      - name: ShellCheck
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          xargs -r -a .ci-shellfiles shellcheck
+
+      - name: shfmt (diff check)
+        run: |
+          set -euo pipefail
+          SHFMT_VERSION=v3.8.0
+          curl -sSfL "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64" -o /usr/local/bin/shfmt
+          chmod +x /usr/local/bin/shfmt
+          xargs -r -a .ci-shellfiles shfmt -i 2 -ci -d
+
+  python:
+    name: Python lint, format & compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install tools
+        run: pip install --quiet ruff bandit
+
+      - name: Ruff lint
+        run: ruff check scripts/filesetquotas/bin/gpfsdf
+
+      - name: Ruff format check
+        run: ruff format --check scripts/filesetquotas/bin/gpfsdf
+
+      - name: Byte-compile
+        run: python -m py_compile scripts/filesetquotas/bin/gpfsdf
+
+      - name: Bandit security scan
+        run: bandit scripts/filesetquotas/bin/gpfsdf
+
+  precommit:
+    name: pre-commit (all hooks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: pre-commit/action@v3.0.1

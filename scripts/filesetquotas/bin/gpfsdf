@@ -17,8 +17,8 @@ def run(cmd):
     assert rc == 0, f"Command failed (exit status {rc}): {cmd}"
 
 
-ioutfile = '/tmp/' + str(time.time())
-cmd = '/usr/lpp/mmfs/bin/mmrepquota -j NOC > ' + ioutfile
+ioutfile = "/tmp/" + str(time.time())
+cmd = "/usr/lpp/mmfs/bin/mmrepquota -j NOC > " + ioutfile
 run(cmd)
 
 f = open(ioutfile)
@@ -26,7 +26,7 @@ f.readline()
 f.readline()
 lines = f.readlines()
 f.close()
-cmd = 'rm -f ' + ioutfile
+cmd = "rm -f " + ioutfile
 os.system(cmd)  # best-effort cleanup of our own temp file
 # Split into lines, skipping any blank line (e.g. a trailing newline)
 fsettable = [line.split() for line in lines if line.strip()]
@@ -36,11 +36,11 @@ fsetDict = {}
 for x in fsettable:
     assert len(x) > 8, f"Unexpected mmrepquota line (need >=9 fields): {x}"
     if x[0] in fsetDict:
-        print('Duplicate path: ' + x[0])
+        print("Duplicate path: " + x[0])
         break
     fsetDict[x[0]] = [x[2], x[3], x[4], x[5], x[8]]
 #  fileset   Used   quota  limit  in_doubt  Number_of_files
-cmd = '/usr/lpp/mmfs/bin/mmlsfileset NOC > ' + ioutfile
+cmd = "/usr/lpp/mmfs/bin/mmlsfileset NOC > " + ioutfile
 run(cmd)
 f = open(ioutfile)
 f.readline()
@@ -48,7 +48,7 @@ f.readline()
 f.readline()
 lines = f.readlines()
 f.close()
-cmd = 'rm -f ' + ioutfile
+cmd = "rm -f " + ioutfile
 os.system(cmd)  # best-effort cleanup of our own temp file
 # Split into lines, skipping any blank line
 table = [line.split() for line in lines if line.strip()]
@@ -57,7 +57,7 @@ pathDict = {}
 for x in table:
     assert len(x) > 2, f"Unexpected mmlsfileset line (need >=3 fields): {x}"
     if x[0] in pathDict:
-        print('Duplicate ID' + pathDict[x[0]])
+        print("Duplicate ID" + pathDict[x[0]])
         sys.exit()
     pathDict[x[0]] = x[2]
 

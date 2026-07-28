@@ -8,7 +8,7 @@ readonly CONFIG="mmlsconfig.wien"
 # config for each. `sort -u` replaces `sort | uniq`; dropping the leading `cat`
 # removes a useless use of cat.
 # shellcheck disable=SC2013  # node-class names are single tokens; word-splitting is intended.
-for NODECLASS in $( grep '\[' "$CONFIG" | sed 's/\[\|\]//g' | sed 's/,/\n/g' | sort -u ) ; do
+for NODECLASS in $(grep '\[' "$CONFIG" | sed 's/\[\|\]//g' | sed 's/,/\n/g' | sort -u); do
   echo
   echo "[$NODECLASS]"
   ./mmlsconfigpernodeclass "$NODECLASS"
