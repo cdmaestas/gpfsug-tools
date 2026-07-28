@@ -65,3 +65,35 @@ jobs:
 
       - name: Bandit security scan
         run: bandit scripts/filesetquotas/bin/gpfsdf
+
+  build:
+    name: Build & test mmmkfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (portable posix_fallocate path)
+        run: make -C src/mmmkfile
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          bin=src/mmmkfile/mmmkfile
+          work="$(mktemp -d)"
+
+          # Real allocation: logical size and allocated blocks both == 4 MiB.
+          "$bin" -v 4m "$work/alloc"
+          [ "$(stat -c %s "$work/alloc")" -eq 4194304 ]
+          [ "$(( $(stat -c %b "$work/alloc") * 512 ))" -eq 4194304 ]
+
+          # Sparse (-n): logical size 100 MiB but (near-)zero blocks allocated.
+          "$bin" -n 100m "$work/sparse"
+          [ "$(stat -c %s "$work/sparse")" -eq 104857600 ]
+          [ "$(stat -c %b "$work/sparse")" -lt 2048 ]
+
+          # Failure modes exit non-zero.
+          ! "$bin" 10q "$work/bad"
+          ! "$bin"
+
+          rm -rf "$work"
+          echo "mmmkfile smoke test passed"

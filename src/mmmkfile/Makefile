@@ -1,36 +1,38 @@
-CC = cc
-CC_R = cc
-CXX = c++
-GPFS_TYPE = GPFS_LINUX
+# Makefile for mmmkfile.
+#
+# Default build uses the portable preallocation path:
+#   - posix_fallocate() on Linux and other POSIX systems
+#   - fcntl(F_PREALLOCATE) on macOS / BSD
+#
+#     make
+#
+# To build against the native GPFS API (gpfs_prealloc), on a node with the
+# GPFS "gpfs.base" / devel files installed:
+#
+#     make GPFS=1
+#
+# Override GPFS_INCLUDE / GPFS_LIB if your install is not under /usr/lpp/mmfs.
 
-IS64BIT := $(shell getconf LONG_BIT)
-ifeq ($(IS64BIT), 64)
-LFSDEFINES = -D_FILE_OFFSET_BITS=64 $(shell getconf LFS64_CFLAGS) $(shell getconf LFS64_LINTFLAGS) -m64
-else
-LFSDEFINES = $(shell getconf LFS_CFLAGS) $(shell getconf LFS_LINTFLAGS) -m32
+CC ?= cc
+CFLAGS ?= -O2 -Wall -Wextra -D_FILE_OFFSET_BITS=64
+LDFLAGS ?=
+LDLIBS ?=
+
+GPFS_INCLUDE ?= /usr/lpp/mmfs/include
+GPFS_LIB ?= /usr/lpp/mmfs/lib
+
+ifdef GPFS
+CFLAGS += -DHAVE_GPFS -I$(GPFS_INCLUDE)
+LDFLAGS += -L$(GPFS_LIB)
+LDLIBS += -lgpfs
 endif
 
-LIB = -lgpfs 
-OTHERINCL=
-OTHERLIB= -lpthread
+PROG = mmmkfile
 
-CFLAGS = -O -D$(GPFS_TYPE) $(LFSDEFINES)
+$(PROG): mmmkfile.c
+	$(CC) $(CFLAGS) -o $@ mmmkfile.c $(LDFLAGS) $(LDLIBS)
 
-PROGS = mmmkfile 
+clean:
+	rm -f $(PROG)
 
-all: $(PROGS)
-debug: CXX += -DDEBUG -g
-debug: CC += -DDEBUG -g
-debug: $(PROGS)
-
-clean: 
-	rm -f $(PROGS)
-
-mmmkfile: mmmkfile.C
-	$(CXX) -o mmmkfile $(CFLAGS) $(OTHERINCL) $(OTHERLIB) $(LIB) mmmkfile.C
-
-test: test.C
-	$(CXX) -o test $(CFLAGS) $(OTHERINCL) $(OTHERLIB) $(LIB) test.C
-
-test2: test2.c
-	$(CXX) -o test2 $(CFLAGS) $(OTHERINCL) $(OTHERLIB) $(LIB) test2.c
+.PHONY: clean

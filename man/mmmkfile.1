@@ -1,0 +1,80 @@
+.TH MMMKFILE 1 "2026-07-28" "gpfsug-tools" "GPFS/Spectrum Scale Usergroup Tools"
+.SH NAME
+mmmkfile \- create a file of a given size on a Spectrum Scale (or POSIX)
+filesystem
+.SH SYNOPSIS
+.B mmmkfile
+.RB [ -n ]
+.RB [ -v ]
+.I size
+.I filename
+.SH DESCRIPTION
+.B mmmkfile
+creates
+.I filename
+and gives it
+.I size
+bytes of space, in the spirit of the classic
+.BR mkfile (8).
+By default the blocks are actually allocated (the file is not sparse) using the
+platform's native preallocation primitive, so the space is reserved without
+writing the data through the normal write path.
+.PP
+The preallocation call used is chosen at build time:
+.BR gpfs_prealloc (3)
+when built with
+.B make GPFS=1
+on a Spectrum Scale node,
+.BR posix_fallocate (3)
+on Linux, or
+.B fcntl(F_PREALLOCATE)
+on macOS/BSD.
+.SH OPTIONS
+.TP
+.I size
+A number with an optional unit suffix (base 1024):
+.BR b " (bytes, the default), " k " (KiB), " m " (MiB), " g " (GiB), " t " (TiB)."
+For example
+.BR 4096 ", " 512k ", " 100m ", " 2g ", " 1t .
+.TP
+.B -n
+Do not allocate blocks; set the file size only. This produces a sparse file
+whose reported size is
+.I size
+but which consumes (almost) no disk space until written.
+.TP
+.B -v
+Verbose: print the file name and size after creating it.
+.TP
+.B -h
+Print a usage message and exit.
+.SH EXIT STATUS
+Returns 0 on success and non-zero on any error (invalid arguments, a size too
+large for the platform, or a failed open/allocate). A diagnostic is printed to
+standard error.
+.SH EXAMPLES
+Preallocate a 10 GiB file:
+.PP
+.RS
+.EX
+mmmkfile 10g /gpfs/scratch/testfile
+.EE
+.RE
+.PP
+Create a 1 TiB sparse file (size set, no space consumed):
+.PP
+.RS
+.EX
+mmmkfile -n 1t /gpfs/scratch/sparsefile
+.EE
+.RE
+.SH NOTES
+If
+.I filename
+already exists it is opened and (pre)allocated in place; existing data is not
+truncated.
+.SH SEE ALSO
+.BR mkfile (8),
+.BR fallocate (1),
+.BR posix_fallocate (3),
+.BR truncate (1)
